@@ -28,6 +28,10 @@ func Handler(next http.HandlerFunc) http.HandlerFunc {
 				InternalErr(w, err)
 			}
 		}()
+
+		// cors header
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
 		next.ServeHTTP(w, r)
 	}
 }
@@ -35,6 +39,8 @@ func Handler(next http.HandlerFunc) http.HandlerFunc {
 // Respond ...
 func Respond(w http.ResponseWriter, response interface{}, httpCode int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
 	w.WriteHeader(httpCode)
 
 	enc := json.NewEncoder(w)
