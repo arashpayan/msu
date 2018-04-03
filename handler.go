@@ -1,4 +1,4 @@
-package main
+package msu
 
 import (
 	"encoding/json"
@@ -9,13 +9,13 @@ import (
 	"runtime"
 )
 
-// LogCalls ...
-var LogCalls = false
+// LogHTTPCalls ...
+var LogHTTPCalls = false
 
 // Handler ...
 func Handler(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if LogCalls {
+		if LogHTTPCalls {
 			log.Printf("%s %s (%s)", r.Method, r.URL.Path, r.RemoteAddr)
 		}
 
@@ -25,14 +25,15 @@ func Handler(next http.HandlerFunc) http.HandlerFunc {
 				numBytes := runtime.Stack(s, false)
 				stack := s[:numBytes]
 				err := fmt.Errorf("recovered - %v\n%s", r, string(stack))
+				InternalErr(w, err)
 			}
 		}()
 		next.ServeHTTP(w, r)
 	}
 }
 
-// SendResponse ...
-func SendResponse(w http.ResponseWriter, response interface{}, httpCode int) {
+// Respond ...
+func Respond(w http.ResponseWriter, response interface{}, httpCode int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(httpCode)
 
@@ -43,9 +44,9 @@ func SendResponse(w http.ResponseWriter, response interface{}, httpCode int) {
 	}
 }
 
-// SendErr ...
-func SendErr(w http.ResponseWriter, msg string, httpCode int, apiCode int) {
-	SendResponse(
+// Err ...
+func Err(w http.ResponseWriter, msg string, httpCode int, apiCode int) {
+	Respond(
 		w,
 		struct {
 			Msg  string `json:"error_message"`
@@ -54,9 +55,9 @@ func SendErr(w http.ResponseWriter, msg string, httpCode int, apiCode int) {
 		httpCode)
 }
 
-// SendInternalErr ...
-func SendInternalErr(w http.ResponseWriter, err error) {
-	SendErr(w, "Internal server error", http.StatusInternalServerError, ErrorInternal)
+// InternalErr ...
+func InternalErr(w http.ResponseWriter, err error) {
+	Err(w, "Internal server error", http.StatusInternalServerError, ErrorInternal)
 
 	if err != nil {
 		_, file, line, ok := runtime.Caller(1)
@@ -69,21 +70,21 @@ func SendInternalErr(w http.ResponseWriter, err error) {
 	}
 }
 
-// SendBadReqCode ...
-func SendBadReqCode(w http.ResponseWriter, msg string, apiCode int) {
-	SendErr(w, msg, http.StatusBadRequest, apiCode)
+// BadReqCode ...
+func BadReqCode(w http.ResponseWriter, msg string, apiCode int) {
+	Err(w, msg, http.StatusBadRequest, apiCode)
 }
 
-// SendBadReq ...
-func SendBadReq(w http.ResponseWriter, msg string) {
-	SendBadReqCode(w, msg, ErrorBadRequest)
+// BadReq ...
+func BadReq(w http.ResponseWriter, msg string) {
+	BadReqCode(w, msg, ErrorBadRequest)
 }
 
-// SendSuccess ...
-func SendSuccess(w http.ResponseWriter, resp interface{}) {
+// Success ...
+func Success(w http.ResponseWriter, resp interface{}) {
 	if resp == nil {
 		resp = struct{}{}
 	}
 
-	SendResponse(w, resp, http.StatusOK)
+	Respond(w, resp, http.StatusOK)
 }
